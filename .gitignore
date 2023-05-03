@@ -1,0 +1,6 @@
+.venv
+.vscode
+keys.py
+activity_cache.json
+*.mp4
+__pycache__
