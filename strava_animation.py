@@ -191,7 +191,7 @@ def plot_data(activities: list[dict[str, Any]]) -> None:
         # Set labels
         ax.set_xlabel("Average Heartrate (BPM)")
         ax.set_ylabel("Average Pace (mins/km)")
-        ax.set_title("John's Running Improvement Visualiser")
+        ax.set_title("Running Improvement Visualiser")
 
         # Set graph limits
         ax.set_xlim(x_min, x_max)
