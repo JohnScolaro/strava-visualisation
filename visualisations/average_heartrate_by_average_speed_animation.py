@@ -8,9 +8,10 @@ from matplotlib.lines import Line2D
 import math
 from matplotlib import cm
 from matplotlib.colors import Normalize
+from pathlib import Path
 
 
-def plot(activities: list[dict[str, Any]]) -> None:
+def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
     # Keep only runs with an average heartrate
     activities = [
         activity
@@ -162,7 +163,7 @@ def plot(activities: list[dict[str, Any]]) -> None:
     )
 
     # Save animation as video
-    ani.save("strava_activities.gif")
+    ani.save(output_directory / "strava_activities.gif")
 
 
 def meters_per_second_to_seconds_per_kilometer(speed: float) -> dt.timedelta:

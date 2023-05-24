@@ -6,3 +6,5 @@ activity_cache.json
 *.gif
 !examples
 __pycache__
+.pytest_cache
+*output

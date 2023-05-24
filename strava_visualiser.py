@@ -15,6 +15,8 @@ from keys import CLIENT_SECRET, CLIENT_ID
 from typing import Any
 import os
 import importlib.util
+from pathlib import Path
+import shutil
 
 
 def get_strava_activity_data_from_web() -> list[dict[str, Any]]:
@@ -118,14 +120,26 @@ def get_strava_activities():
 
 
 def traverse_modules_and_call_function(activities: list[dict[str, Any]]):
-    folder_path = "visualisations"
+    visualisation_folder_name = "visualisations"
     function_name = "plot"
 
-    for root, dirs, files in os.walk(folder_path):
+    # Create output folder
+    folder_path = "output"
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    output_directory = Path(folder_path)
+
+    for root, dirs, files in os.walk(visualisation_folder_name):
         for file in files:
             if file.endswith(".py"):
                 module_name = os.path.splitext(file)[0]
                 module_path = os.path.join(root, file)
+
+                # Create a subdirectory for the output if it doesn't exist.
+                output_subdir = output_directory / module_name
+                if not os.path.exists(output_subdir):
+                    os.makedirs(output_subdir)
 
                 spec = importlib.util.spec_from_file_location(module_name, module_path)
                 module = importlib.util.module_from_spec(spec)
@@ -135,7 +149,7 @@ def traverse_modules_and_call_function(activities: list[dict[str, Any]]):
                     getattr(module, function_name)
                 ):
                     function = getattr(module, function_name)
-                    function(activities)  # Call the function
+                    function(activities, output_subdir)  # Call the function
 
 
 if __name__ == "__main__":
