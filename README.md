@@ -12,7 +12,7 @@ This repo contains a small script that generates an animated graph using your St
 
 3. Using python, make sure all the required packages are installed with `pip install -r requirements.txt`.
 
-4. Run with: `python strava_animation.py`
+4. Run with: `python strava_visualiser.py`
 
 5. You'll be redirected to Strava to log in. Once permission is given, you'll be redirected to a URL that points to localhost. This is intentional. In the URL will look like this: "http://localhost:8000/?state=&code=[YOUR CODE HERE]&scope=read,activity:read_all,profile:read_all". Copy out your code and paste it back into the terminal.
 

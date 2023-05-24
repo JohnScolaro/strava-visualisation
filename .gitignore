@@ -3,4 +3,6 @@
 keys.py
 activity_cache.json
 *.mp4
+*.gif
+!examples
 __pycache__
