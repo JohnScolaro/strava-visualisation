@@ -9,19 +9,33 @@ import math
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from pathlib import Path
+from typing import Union, Literal
 
 
 def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
-    # Keep only runs with an average heartrate
-    activities = [
+    # Sort activities by start date.
+    activities.sort(key=lambda activity: activity["start_date"])
+
+    runs = [
         activity
         for activity in activities
         if activity["type"] == "Run" and "average_heartrate" in activity
     ]
 
-    # Sort activities by start date.
-    activities.sort(key=lambda activity: activity["start_date"])
+    rides = [
+        activity
+        for activity in activities
+        if activity["type"] == "Ride" and "average_heartrate" in activity
+    ]
+    # generate_plots("Runs", runs, output_directory)
+    generate_plots("Rides", rides, output_directory)
 
+
+def generate_plots(
+    activity_type: Union[Literal["Runs"], Literal["Rides"]],
+    activities: list[dict[str, Any]],
+    output_directory: Path,
+):
     # Set up animation
     fig, ax = plt.subplots()
     plt.figure(figsize=(8, 5))
@@ -100,39 +114,75 @@ def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
         # Set labels
         ax.set_xlabel("Average Heartrate (BPM)")
         ax.set_ylabel("Average Pace (mins/km)")
-        ax.set_title("Running Improvement Visualiser")
+        ax.set_title(f"{activity_type} Improvement Visualiser")
 
         # Set graph limits
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
         # Set legend
-        legend_elements = [
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                color="k",
-                label="5km",
-                markerfacecolor="k",
-                markersize=math.sqrt(
-                    (5.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+        if activity_type == "Runs":
+            legend_elements = [
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="k",
+                    label="5km",
+                    markerfacecolor="k",
+                    markersize=math.sqrt(
+                        (5.0000 - min(distances))
+                        / (max(distances) - min(distances))
+                        * 200
+                    ),
+                    linestyle="",
                 ),
-                linestyle="",
-            ),
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                color="k",
-                label="10km",
-                markerfacecolor="k",
-                markersize=math.sqrt(
-                    (10.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="k",
+                    label="10km",
+                    markerfacecolor="k",
+                    markersize=math.sqrt(
+                        (10.0000 - min(distances))
+                        / (max(distances) - min(distances))
+                        * 200
+                    ),
+                    linestyle="",
                 ),
-                linestyle="",
-            ),
-        ]
+            ]
+        else:
+            legend_elements = [
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="k",
+                    label="20km",
+                    markerfacecolor="k",
+                    markersize=math.sqrt(
+                        (20.0000 - min(distances))
+                        / (max(distances) - min(distances))
+                        * 200
+                    ),
+                    linestyle="",
+                ),
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="k",
+                    label="40km",
+                    markerfacecolor="k",
+                    markersize=math.sqrt(
+                        (40.0000 - min(distances))
+                        / (max(distances) - min(distances))
+                        * 200
+                    ),
+                    linestyle="",
+                ),
+            ]
         ax.legend(handles=legend_elements, loc="upper right")
 
     set_pretty_things()
@@ -158,12 +208,21 @@ def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
         scatter = ax.scatter(x, y, s=s, c=c)
         return []
 
+    update(len(activities) - 1)
+    plt.savefig(
+        output_directory
+        / f"{activity_type.lower()}_average_heartrate_by_average_speed.png"
+    )
+
     ani = animation.FuncAnimation(
         fig, update, frames=len(activities), blit=True, interval=50
     )
 
     # Save animation as video
-    ani.save(output_directory / "strava_activities.gif")
+    ani.save(
+        output_directory
+        / f"{activity_type.lower()}_average_heartrate_by_average_speed.gif"
+    )
 
 
 def meters_per_second_to_seconds_per_kilometer(speed: float) -> dt.timedelta:
