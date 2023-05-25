@@ -9,7 +9,9 @@ import math
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from pathlib import Path
-from typing import Union, Literal
+from typing import Union, Literal, Callable
+
+ActivityTypeT = Union[Literal["Runs"], Literal["Rides"]]
 
 
 def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
@@ -27,15 +29,18 @@ def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
         for activity in activities
         if activity["type"] == "Ride" and "average_heartrate" in activity
     ]
-    # generate_plots("Runs", runs, output_directory)
+    generate_plots("Runs", runs, output_directory)
     generate_plots("Rides", rides, output_directory)
 
 
 def generate_plots(
-    activity_type: Union[Literal["Runs"], Literal["Rides"]],
+    activity_type: ActivityTypeT,
     activities: list[dict[str, Any]],
     output_directory: Path,
 ):
+    speed_conversion_function = get_speed_conversion_function(activity_type)
+    y_axis_label = get_y_axis_label(activity_type)
+
     # Set up animation
     fig, ax = plt.subplots()
     plt.figure(figsize=(8, 5))
@@ -52,8 +57,7 @@ def generate_plots(
 
     average_heartrates = [activity["average_heartrate"] for activity in activities]
     average_paces = [
-        meters_per_second_to_seconds_per_kilometer(activity["average_speed"])
-        for activity in activities
+        speed_conversion_function(activity["average_speed"]) for activity in activities
     ]
     start_times = [
         parser.parse(activity["start_date"]).timestamp() for activity in activities
@@ -98,12 +102,12 @@ def generate_plots(
 
         y_min, y_max = (
             min(
-                meters_per_second_to_seconds_per_kilometer(activity["average_speed"])
+                speed_conversion_function(activity["average_speed"])
                 for activity in activities
             )
             * 0.9,
             max(
-                meters_per_second_to_seconds_per_kilometer(activity["average_speed"])
+                speed_conversion_function(activity["average_speed"])
                 for activity in activities
             )
             * 1.1,
@@ -113,7 +117,7 @@ def generate_plots(
 
         # Set labels
         ax.set_xlabel("Average Heartrate (BPM)")
-        ax.set_ylabel("Average Pace (mins/km)")
+        ax.set_ylabel(y_axis_label)
         ax.set_title(f"{activity_type} Improvement Visualiser")
 
         # Set graph limits
@@ -121,68 +125,7 @@ def generate_plots(
         ax.set_ylim(y_min, y_max)
 
         # Set legend
-        if activity_type == "Runs":
-            legend_elements = [
-                Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="k",
-                    label="5km",
-                    markerfacecolor="k",
-                    markersize=math.sqrt(
-                        (5.0000 - min(distances))
-                        / (max(distances) - min(distances))
-                        * 200
-                    ),
-                    linestyle="",
-                ),
-                Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="k",
-                    label="10km",
-                    markerfacecolor="k",
-                    markersize=math.sqrt(
-                        (10.0000 - min(distances))
-                        / (max(distances) - min(distances))
-                        * 200
-                    ),
-                    linestyle="",
-                ),
-            ]
-        else:
-            legend_elements = [
-                Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="k",
-                    label="20km",
-                    markerfacecolor="k",
-                    markersize=math.sqrt(
-                        (20.0000 - min(distances))
-                        / (max(distances) - min(distances))
-                        * 200
-                    ),
-                    linestyle="",
-                ),
-                Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="k",
-                    label="40km",
-                    markerfacecolor="k",
-                    markersize=math.sqrt(
-                        (40.0000 - min(distances))
-                        / (max(distances) - min(distances))
-                        * 200
-                    ),
-                    linestyle="",
-                ),
-            ]
+        legend_elements = get_legend_elements(activity_type, distances)
         ax.legend(handles=legend_elements, loc="upper right")
 
     set_pretty_things()
@@ -197,13 +140,8 @@ def generate_plots(
         s = sizes[: frame + 1]
         c = colours[: frame + 1]
 
-        # format the y-axis labels with time in minutes and seconds
-        def format_time(x, pos):
-            mins = int(x / 60)
-            secs = int(x) % 60
-            return f"{mins:02d}:{secs:02d}"
-
-        plt.gca().yaxis.set_major_formatter(FuncFormatter(format_time))
+        y_axis_formatter = get_y_axis_formatter(activity_type)
+        plt.gca().yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
         scatter = ax.scatter(x, y, s=s, c=c)
         return []
@@ -227,3 +165,99 @@ def generate_plots(
 
 def meters_per_second_to_seconds_per_kilometer(speed: float) -> dt.timedelta:
     return 1000 / speed
+
+
+def meters_per_second_to_kilometers_per_hour(speed: float) -> dt.timedelta:
+    return speed / 1000 * 3600
+
+
+def get_speed_conversion_function(
+    activity_type: ActivityTypeT,
+) -> Callable[[float], float]:
+    if activity_type == "Runs":
+        return meters_per_second_to_seconds_per_kilometer
+    else:
+        return meters_per_second_to_kilometers_per_hour
+
+
+def get_y_axis_label(activity_type: ActivityTypeT) -> str:
+    if activity_type == "Runs":
+        return "Average Pace (mins/km)"
+    else:
+        return "Average Speed (kmph)"
+
+
+def get_legend_elements(
+    activity_type: ActivityTypeT, distances: list[float]
+) -> list[Line2D]:
+    if activity_type == "Runs":
+        legend_elements = [
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="k",
+                label="5km",
+                markerfacecolor="k",
+                markersize=math.sqrt(
+                    (5.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+                ),
+                linestyle="",
+            ),
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="k",
+                label="10km",
+                markerfacecolor="k",
+                markersize=math.sqrt(
+                    (10.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+                ),
+                linestyle="",
+            ),
+        ]
+    else:
+        return [
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="k",
+                label="20km",
+                markerfacecolor="k",
+                markersize=math.sqrt(
+                    (20.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+                ),
+                linestyle="",
+            ),
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="k",
+                label="40km",
+                markerfacecolor="k",
+                markersize=math.sqrt(
+                    (40.0000 - min(distances)) / (max(distances) - min(distances)) * 200
+                ),
+                linestyle="",
+            ),
+        ]
+
+
+def get_y_axis_formatter(activity_type: ActivityTypeT) -> Callable:
+    if activity_type == "Runs":
+
+        def format_time(x, pos):
+            mins = int(x / 60)
+            secs = int(x) % 60
+            return f"{mins:02d}:{secs:02d}"
+
+        return format_time
+    else:
+
+        def format_speed(x, pos):
+            return x
+
+        return format_speed
