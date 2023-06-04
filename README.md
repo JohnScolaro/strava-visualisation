@@ -1,8 +1,10 @@
 This repo contains a small script that generates an animated graph using your Strava data. Is the code quality good? Not particularly, because I don't really intend on anyone else even using it. If people do, or if I want to make more visualisations though, then I'll clean it up.
 
-# Example
+# Examples
 
-![](examples/strava_activities.gif)
+![](examples/runs_average_heartrate_by_average_speed.gif)
+
+![](github_style_activity_counter_2022.png)
 
 # Setup
 
