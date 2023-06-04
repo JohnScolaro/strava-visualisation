@@ -1,7 +1,7 @@
 .venv
 .vscode
 keys.py
-activity_cache.json
+activity_cache.obj
 *.mp4
 *.gif
 !examples/*

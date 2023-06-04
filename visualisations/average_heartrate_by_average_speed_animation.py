@@ -3,39 +3,38 @@ import matplotlib.animation as animation
 from typing import Any
 import datetime as dt
 from matplotlib.ticker import FuncFormatter
-from dateutil import parser
 from matplotlib.lines import Line2D
 import math
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from pathlib import Path
-from typing import Union, Literal, Callable
+from typing import Callable
+from stravalib.model import Activity, ActivityType
+from stravalib.unithelper import Quantity
 
-ActivityTypeT = Union[Literal["Runs"], Literal["Rides"]]
 
-
-def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
+def plot(activities: list[Activity], output_directory: Path) -> None:
     # Sort activities by start date.
-    activities.sort(key=lambda activity: activity["start_date"])
+    activities.sort(key=lambda activity: activity.start_date)
 
     runs = [
         activity
         for activity in activities
-        if activity["type"] == "Run" and "average_heartrate" in activity
+        if activity.type == "Run" and activity.average_heartrate is not None
     ]
 
     rides = [
         activity
         for activity in activities
-        if activity["type"] == "Ride" and "average_heartrate" in activity
+        if activity.type == "Ride" and activity.average_heartrate is not None
     ]
     generate_plots("Runs", runs, output_directory)
     generate_plots("Rides", rides, output_directory)
 
 
 def generate_plots(
-    activity_type: ActivityTypeT,
-    activities: list[dict[str, Any]],
+    activity_type: ActivityType,
+    activities: list[Activity],
     output_directory: Path,
 ):
     speed_conversion_function = get_speed_conversion_function(activity_type)
@@ -45,7 +44,7 @@ def generate_plots(
     fig, ax = plt.subplots()
     plt.figure(figsize=(8, 5))
 
-    scatter = ax.scatter(
+    ax.scatter(
         [],
         [],
     )
@@ -55,14 +54,12 @@ def generate_plots(
     # init the figure
     fig, ax = plt.subplots(figsize=(8, 7))
 
-    average_heartrates = [activity["average_heartrate"] for activity in activities]
+    average_heartrates = [activity.average_heartrate for activity in activities]
     average_paces = [
-        speed_conversion_function(activity["average_speed"]) for activity in activities
+        speed_conversion_function(activity.average_speed) for activity in activities
     ]
-    start_times = [
-        parser.parse(activity["start_date"]).timestamp() for activity in activities
-    ]
-    distances = [activity["distance"] / 1000 for activity in activities]
+    start_times = [activity.start_date.timestamp() for activity in activities]
+    distances = [activity.distance / 1000 for activity in activities]
 
     normalized_start_times = [
         (t - min(start_times)) / (max(start_times) - min(start_times))
@@ -96,18 +93,18 @@ def generate_plots(
 
     def set_pretty_things() -> None:
         x_min, x_max = (
-            min(activity["average_heartrate"] for activity in activities) - 10,
-            max(activity["average_heartrate"] for activity in activities) + 10,
+            min(activity.average_heartrate for activity in activities) - 10,
+            max(activity.average_heartrate for activity in activities) + 10,
         )
 
         y_min, y_max = (
             min(
-                speed_conversion_function(activity["average_speed"])
+                speed_conversion_function(activity.average_speed)
                 for activity in activities
             )
             * 0.9,
             max(
-                speed_conversion_function(activity["average_speed"])
+                speed_conversion_function(activity.average_speed)
                 for activity in activities
             )
             * 1.1,
@@ -143,7 +140,7 @@ def generate_plots(
         y_axis_formatter = get_y_axis_formatter(activity_type)
         plt.gca().yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
-        scatter = ax.scatter(x, y, s=s, c=c)
+        ax.scatter(x, y, s=s, c=c)
         return []
 
     update(len(activities) - 1)
@@ -172,25 +169,26 @@ def meters_per_second_to_kilometers_per_hour(speed: float) -> dt.timedelta:
 
 
 def get_speed_conversion_function(
-    activity_type: ActivityTypeT,
+    activity_type: ActivityType,
 ) -> Callable[[float], float]:
-    if activity_type == "Runs":
+    if activity_type == "Run":
         return meters_per_second_to_seconds_per_kilometer
     else:
         return meters_per_second_to_kilometers_per_hour
 
 
-def get_y_axis_label(activity_type: ActivityTypeT) -> str:
-    if activity_type == "Runs":
+def get_y_axis_label(activity_type: ActivityType) -> str:
+    if activity_type == "Run":
         return "Average Pace (mins/km)"
     else:
         return "Average Speed (kmph)"
 
 
 def get_legend_elements(
-    activity_type: ActivityTypeT, distances: list[float]
+    activity_type: ActivityType, distances: list[Quantity]
 ) -> list[Line2D]:
-    if activity_type == "Runs":
+    distances = [float(distance) for distance in distances]
+    if activity_type == "Run":
         legend_elements = [
             Line2D(
                 [0],
@@ -246,8 +244,8 @@ def get_legend_elements(
         ]
 
 
-def get_y_axis_formatter(activity_type: ActivityTypeT) -> Callable:
-    if activity_type == "Runs":
+def get_y_axis_formatter(activity_type: ActivityType) -> Callable:
+    if activity_type == "Run":
 
         def format_time(x, pos):
             mins = int(x / 60)
@@ -261,3 +259,18 @@ def get_y_axis_formatter(activity_type: ActivityTypeT) -> Callable:
             return x
 
         return format_speed
+
+
+# For testing
+if __name__ == "__main__":
+    import os
+    from pathlib import Path
+    import pickle
+
+    dir_path = Path(os.path.dirname(os.path.realpath(__file__)))
+    p = dir_path / ".." / "activity_cache.obj"
+
+    with open(p, "rb") as json_file:
+        json_data = pickle.load(json_file)
+
+    plot(activities=json_data, output_directory=dir_path)
