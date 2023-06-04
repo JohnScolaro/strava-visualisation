@@ -8,7 +8,7 @@ An animation showing how (hopefully) your runs are improving over time. Still .p
 A GitHub contributions inspired visualisation of activity frequency. One image is generated for each year active on Strava.
 ![](examples/github_style_activity_counter_2022.png)
 
-A graph showing cumulative time spent on activities each year. Graphs are generated for all activities for each year. Here is an example 
+A graph showing cumulative time spent on activities each year. Graphs are generated for all activities for each year. Here is an example.
 ![](examples/cumulative_time_spent_Run.png)
 
 # Setup
