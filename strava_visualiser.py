@@ -8,97 +8,74 @@ This parent programs job is to:
         visualistations to.
 """
 
-import requests
-import json
 import os.path
 from keys import CLIENT_SECRET, CLIENT_ID
 from typing import Any
 import os
 import importlib.util
 from pathlib import Path
-import shutil
+from stravalib.client import Client
+import pickle
 
 
 def get_strava_activity_data_from_web() -> list[dict[str, Any]]:
     # Set up API credentials
     redirect_uri = "http://localhost:8000/"
-    authorization_url = f"https://www.strava.com/oauth/authorize?client_id={CLIENT_ID}&response_type=code&redirect_uri={redirect_uri}&approval_prompt=force&scope=profile:read_all,activity:read_all"
+
+    client = Client()
+    authorize_url = client.authorization_url(
+        client_id=CLIENT_ID, redirect_uri=redirect_uri
+    )
 
     # Print authorization URL and prompt user to visit it
     print(
-        f"Please visit the following URL to authorize your Strava account:\n{authorization_url}"
+        f"Please visit the following URL to authorize your Strava account:\n{authorize_url}"
     )
     authorization_code = input("Enter the authorization code: ")
 
-    # Exchange authorization code for access token
-    access_token_url = "https://www.strava.com/oauth/token"
-    data = {
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-        "code": authorization_code,
-        "grant_type": "authorization_code",
-        "scope": "activity:read",
-    }
-    response = requests.post(access_token_url, data=data)
-    if not response.ok:
-        raise Exception(
-            f"Request failed with status code {response.status_code}: {response.text}"
-        )
-    access_token = response.json()["access_token"]
+    token_response = client.exchange_code_for_token(
+        client_id=CLIENT_ID, client_secret=CLIENT_SECRET, code=authorization_code
+    )
+    access_token = token_response["access_token"]
+    refresh_token = token_response["refresh_token"]
+    expires_at = token_response["expires_at"]
 
-    # Set up API endpoints
-    base_url = "https://www.strava.com/api/v3"
-    activities_url = f"{base_url}/athlete/activities"
+    client.access_token = access_token
+    client.refresh_token = refresh_token
+    client.token_expires_at = expires_at
 
-    # Set up headers
-    headers = {"authorization": f"Bearer {access_token}", "accept": "application/json"}
-
-    # Get all activities
-    params = {"per_page": 200, "page": 1}
-    activities = []
-    while True:
-        response = requests.get(activities_url, headers=headers, params=params)
-        if not response.ok:
-            raise Exception(
-                f"Request failed with status code {response.status_code}: {response.text}"
-            )
-        new_activities = [activity for activity in response.json()]
-        activities += new_activities
-        if len(new_activities) < params["per_page"]:
-            break
-        params["page"] += 1
-
-    return activities
+    activities = client.get_activities()
+    return list(activities)
 
 
 def strava_data_cache_already_exists() -> bool:
-    cache_path = get_json_cache_file_path()
+    cache_path = get_pickle_cache_file_path()
 
     # Check if the JSON file exists
     return os.path.isfile(cache_path)
 
 
 def save_strava_activity_data_to_cache(activities: list[dict[str, Any]]) -> None:
-    cache_path = get_json_cache_file_path()
+    cache_path = get_pickle_cache_file_path()
 
     # Wipe the JSON file if it exists, then dump the list of dictionaries to it
-    with open(cache_path, "w") as f:
-        json.dump(activities, f)
-        print("Successfully dumped to activity_cache.json")
+    with open(cache_path, "wb") as f:
+        pickle.dump(activities, f)
+        print("Successfully dumped to cache.")
 
 
 def load_cached_strava_activities() -> list[dict[str, Any]]:
-    cache_path = get_json_cache_file_path()
+    cache_path = get_pickle_cache_file_path()
 
     # Wipe the JSON file if it exists, then dump the list of dictionaries to it
-    with open(cache_path, "r") as f:
-        activities = json.load(f)
-        print("Successfully loaded from activity_cache.json")
+    with open(cache_path, "rb") as f:
+        activities = pickle.load(f)
+        print("Successfully loaded from cache.")
 
     return activities
 
 
-def get_json_cache_file_path() -> str:
+def get_pickle_cache_file_path() -> str:
     # Get the path of the currently executing file
     current_file_path = os.path.abspath(__file__)
 
@@ -106,8 +83,8 @@ def get_json_cache_file_path() -> str:
     current_directory = os.path.dirname(current_file_path)
 
     # Construct the path to the JSON file
-    json_file_path = os.path.join(current_directory, "activity_cache.json")
-    return json_file_path
+    file_path = os.path.join(current_directory, "activity_cache.obj")
+    return file_path
 
 
 def get_strava_activities():

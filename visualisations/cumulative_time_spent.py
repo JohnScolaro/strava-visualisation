@@ -3,19 +3,17 @@ from pathlib import Path
 import datetime as dt
 import itertools
 import matplotlib.pyplot as plt
-import matplotlib
 from typing import Optional
+from stravalib.model import Activity, ActivityType
 
 
-def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
+def plot(activities: list[Activity], output_directory: Path) -> None:
     # Get set of all the different types of activities this person has logged.
-    activity_types = set(activity["type"] for activity in activities)
+    activity_types = set(activity.type for activity in activities)
 
     for activity_type in activity_types:
         plot_graph(
-            list(
-                filter(lambda activity: activity["type"] == activity_type, activities)
-            ),
+            list(filter(lambda activity: activity.type == activity_type, activities)),
             output_directory,
             activity_type,
         )
@@ -24,17 +22,18 @@ def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
 
 
 def plot_graph(
-    activities: list[dict[str, Any]],
+    activities: list[Activity],
     output_directory: Path,
-    activity_type: Optional[str] = None,
+    activity_type: Optional[ActivityType] = None,
 ) -> None:
-    format = "%Y-%m-%dT%H:%M:%SZ"
     graph_data = {}
     for activity in activities:
-        activity_datetime = dt.datetime.strptime(activity["start_date_local"], format)
+        activity_datetime = activity.start_date_local
         year = activity_datetime.year
         year_data = graph_data.get(year, [0] * 366)
-        year_data[activity_datetime.timetuple().tm_yday] += activity["elapsed_time"]
+        year_data[
+            activity_datetime.timetuple().tm_yday
+        ] += activity.elapsed_time.total_seconds()
         graph_data[year] = year_data
 
     for year, year_data in graph_data.items():
@@ -79,12 +78,12 @@ def get_title_for_activity_type(activity_type: Optional[str]) -> str:
 if __name__ == "__main__":
     import os
     from pathlib import Path
-    import json
+    import pickle
 
     dir_path = Path(os.path.dirname(os.path.realpath(__file__)))
-    p = dir_path / ".." / "activity_cache.json"
+    p = dir_path / ".." / "activity_cache.obj"
 
-    with open(p, "r") as json_file:
-        json_data = json.load(json_file)
+    with open(p, "rb") as json_file:
+        json_data = pickle.load(json_file)
 
     plot(activities=json_data, output_directory=dir_path)

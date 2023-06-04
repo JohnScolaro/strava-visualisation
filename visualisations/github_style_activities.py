@@ -7,16 +7,13 @@ import seaborn
 from collections import Counter
 from matplotlib.patches import Patch
 import matplotlib
+from stravalib.model import Activity
 
 CMAP = "YlGn"
 
 
-def plot(activities: list[dict[str, Any]], output_directory: Path) -> None:
-    format = "%Y-%m-%dT%H:%M:%SZ"
-    activity_dates = [
-        dt.datetime.strptime(activity["start_date_local"], format)
-        for activity in activities
-    ]
+def plot(activities: list[Activity], output_directory: Path) -> None:
+    activity_dates = [activity.start_date_local for activity in activities]
 
     earliest_activity = min(activity_dates)
     latest_activity = max(activity_dates)
@@ -157,12 +154,12 @@ def modify_activity_count(df: pd.DataFrame) -> pd.DataFrame:
 if __name__ == "__main__":
     import os
     from pathlib import Path
-    import json
+    import pickle
 
     dir_path = Path(os.path.dirname(os.path.realpath(__file__)))
-    p = dir_path / ".." / "activity_cache.json"
+    p = dir_path / ".." / "activity_cache.obj"
 
-    with open(p, "r") as json_file:
-        json_data = json.load(json_file)
+    with open(p, "rb") as json_file:
+        json_data = pickle.load(json_file)
 
     plot(activities=json_data, output_directory=dir_path)
