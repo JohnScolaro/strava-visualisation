@@ -2,9 +2,14 @@ This repo contains a small script that generates an animated graph using your St
 
 # Examples
 
+An animation showing how (hopefully) your runs are improving over time. Still .png's are also generated.
 ![](examples/runs_average_heartrate_by_average_speed.gif)
 
-![](github_style_activity_counter_2022.png)
+A GitHub contributions inspired visualisation of activity frequency. One image is generated for each year active on Strava.
+![](examples/github_style_activity_counter_2022.png)
+
+A graph showing cumulative time spent on activities each year. Graphs are generated for all activities for each year. Here is an example 
+![](examples/cumulative_time_spent_Run.png)
 
 # Setup
 
