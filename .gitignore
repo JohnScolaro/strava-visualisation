@@ -4,7 +4,7 @@ keys.py
 activity_cache.json
 *.mp4
 *.gif
-!examples
+!examples/*
 __pycache__
 .pytest_cache
 *output
