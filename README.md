@@ -1,3 +1,9 @@
+# Notice
+
+This repo is no longer maintained, but the plots have been rewritten in this repo [here](https://github.com/JohnScolaro/active-statistics), and can be ran on your own data with this free webapp [here!](https://active-statistics.com/)
+
+# Introduction
+
 This repo contains a small script that generates an animated graph using your Strava data. Is the code quality good? Not particularly, because I don't really intend on anyone else even using it. If people do, or if I want to make more visualisations though, then I'll clean it up.
 
 # Examples
